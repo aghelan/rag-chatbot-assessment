@@ -1,5 +1,6 @@
 import os
 import sys
+import subprocess
 
 import streamlit as st
 
@@ -7,6 +8,29 @@ import streamlit as st
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 from rag_pipeline import RAGPipeline
+
+
+VECTOR_INDEX_PATH = os.path.join("vector_store", "index.faiss")
+METADATA_PATH = os.path.join("vector_store", "metadata.pkl")
+
+
+def ensure_vector_store():
+    """
+    Build the vector store automatically if it does not exist.
+    Useful for first-time deployment environments.
+    """
+    if not os.path.exists(VECTOR_INDEX_PATH) or not os.path.exists(METADATA_PATH):
+        with st.spinner("Preparing vector store for first-time startup..."):
+            result = subprocess.run(
+                [sys.executable, "src/ingest.py"],
+                capture_output=True,
+                text=True
+            )
+
+            if result.returncode != 0:
+                raise RuntimeError(
+                    f"Failed to build vector store.\n\nSTDOUT:\n{result.stdout}\n\nSTDERR:\n{result.stderr}"
+                )
 
 
 st.set_page_config(
@@ -18,7 +42,8 @@ st.set_page_config(
 
 @st.cache_resource
 def load_pipeline():
-    return RAGPipeline(top_k=3)
+    ensure_vector_store()
+    return RAGPipeline(top_k=2)
 
 
 pipeline = load_pipeline()
@@ -33,6 +58,8 @@ st.markdown(
     - Gemini 2.5 Flash API
     """
 )
+
+st.caption("Answers are generated based only on the uploaded FAQ knowledge base.")
 
 st.divider()
 
@@ -52,7 +79,7 @@ if st.button("Ask"):
                 st.subheader("Answer")
                 st.markdown(result["answer"])
 
-                with st.expander("Retrieved Context / Source Chunks"):
+                with st.expander("Retrieved Source Documents"):
                     if result["retrieved_docs"]:
                         for i, doc in enumerate(result["retrieved_docs"], start=1):
                             st.markdown(f"**Document {i}**")

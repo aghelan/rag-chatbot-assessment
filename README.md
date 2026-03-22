@@ -56,3 +56,9 @@ Retriever
 Gemini 2.5 Flash API
    ↓
 Streamlit Chatbot UI
+
+---
+
+## Author 
+
+Aghelan Logasaravanan
