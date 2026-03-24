@@ -56,10 +56,11 @@ Retriever
 Gemini 2.5 Flash API
    ↓
 Streamlit Chatbot UI
-...
+```
 
-Project Structure
+## Project Structure
 
+```text
 rag-chatbot-assessment/
 │
 ├── app.py
@@ -78,210 +79,181 @@ rag-chatbot-assessment/
 │   └── retriever.py
 │
 └── vector_store/     # generated locally after ingestion
+```
 
-Setup Instructions
+## Setup Instructions
 
 1. Clone the repository
-
+```
 git clone https://github.com/aghelan/rag-chatbot-assessment.git
 cd rag-chatbot-assessment
+```
 
-2. Create a virtual environment
-Windows
-
+2. Create a virtual environment (Windows)
+```
 python -m venv .venv
 .venv\Scripts\activate
-
+```
 3. Install dependencies
-
+```
 pip install -r requirements.txt
+```
 
 4. Configure the Gemini API key
 
 Create a .env file in the project root and add:
-
+```
 GEMINI_API_KEY=your_valid_gemini_api_key_here
-
+```
 Notes:
-
-A valid Gemini API key is required for answer generation.
-
-For Streamlit Cloud deployment, the same key should be added in Streamlit app secrets.
+- A valid Gemini API key is required for answer generation.
+- Do not commit your real API key to GitHub.
+- For Streamlit Cloud deployment, the same key should be added in Streamlit app secrets.
 
 5. Build the vector store
 
 Run the ingestion script:
-
+```
 python src/ingest.py
-
+```
 This will generate:
-
+```
 vector_store/index.faiss
 
 vector_store/metadata.pkl
+```
 
 6. Run the application
-
+```
 streamlit run app.py
-
+```
 After running the command, open the local URL shown in the terminal, typically:
-
+```
 http://localhost:8501
+```
 
-
-Quick Execution Steps
-
+## Quick Execution Steps
 Windows
+```
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
+```
 
 Create .env and add:
-
+```
 GEMINI_API_KEY=your_valid_gemini_api_key_here
-
+```
 Then run:
-
+```
 python src/ingest.py
+```
+```
 streamlit run app.py
-macOS / Linux
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+```
 
-Create .env and add:
+## How the System Works
 
-GEMINI_API_KEY=your_valid_gemini_api_key_here
-
-Then run:
-
-python src/ingest.py
-streamlit run app.py
-
-How the System Works
-1. Knowledge Base Preparation
+### 1. Knowledge Base Preparation
 
 The original FAQ document was manually cleaned and converted into a structured text file:
+- each FAQ is separated clearly
+- each entry includes:
+ - FAQ ID
+ - Category
+ - Question
+ - Answer
 
-each FAQ is separated clearly
-
-each entry includes:
-
-FAQ ID
-
-Category
-
-Question
-
-Answer
-
-2. Ingestion
+### 2. Ingestion
 
 The ingestion pipeline:
+- loads faq_clean.txt
+- splits it into FAQ-level chunks
+- generates embeddings
+- stores the vectors in a FAISS index
+- stores metadata in a pickle file
 
-loads faq_clean.txt
-
-splits it into FAQ-level chunks
-
-generates embeddings
-
-stores the vectors in a FAISS index
-
-stores metadata in a pickle file
-
-3. Retrieval
+### 3. Retrieval
 
 When a user asks a question:
+- the query is embedded using the same multilingual embedding model
+- FAISS searches for the closest matching FAQ chunks
+- top matching documents are returned
 
-the query is embedded using the same multilingual embedding model
+### 4. Answer Generation
 
-FAISS searches for the closest matching FAQ chunks
-
-top matching documents are returned
-
-4. Answer Generation
-
-The retrieved documents are passed into a grounded prompt and sent to Gemini 2.5 Flash using Python requests.
+The retrieved documents are passed into a grounded prompt and sent to Gemini 2.5 Flash using Python `requests`.
 
 The model is instructed to:
+- answer only from the provided context
+- avoid hallucinating facts
+- return a fallback response if the answer is unclear
 
-answer only from the provided context
-
-avoid hallucinating facts
-
-return a fallback response if the answer is unclear
-
-5. User Interface
-
+### 5. User Interface
 The chatbot is exposed through a simple Streamlit web interface where users can:
+- type a question
+- view the generated answer
+- inspect retrieved source documents
 
-type a question
-
-view the generated answer
-
-inspect retrieved source documents
-
-Example Queries
+## Example Queries
 
 Try the following example questions:
 
-Bagaimana saya nak batalkan langganan TontonUp?
+- Bagaimana saya nak batalkan langganan TontonUp?
+- Bagaimana saya nak menukar kata laluan?
+- Boleh saya melanggan apabila saya di luar negara Malaysia?
+- Kenapa saya masih nampak iklan walaupun sudah melanggan?
+- Apakah program TV Tuisyen yang disediakan di platform Tonton?
 
-Bagaimana saya nak menukar kata laluan?
-
-Boleh saya melanggan apabila saya di luar negara Malaysia?
-
-Kenapa saya masih nampak iklan walaupun sudah melanggan?
-
-Apakah program TV Tuisyen yang disediakan di platform Tonton?
-
-Guardrails
+## Guardrails
 
 This project includes basic guardrails to improve safety and reliability.
 
-Prompt Filtering
+### Prompt Filtering
 
 The chatbot blocks clearly malicious or prompt-injection style inputs such as:
+- attempts to reveal system prompts
+- prompt bypass attempts
+- malware or hacking related requests
 
-attempts to reveal system prompts
-
-prompt bypass attempts
-
-malware or hacking related requests
-
-Retrieval Confidence Check
+### Retrieval Confidence Check
 
 If the retrieved documents are too weak or not relevant enough, the chatbot returns a fallback response instead of forcing an answer.
 
 This helps reduce unsupported or hallucinated outputs.
 
-Why Multilingual Embeddings Were Used
+## Why Multilingual Embeddings Were Used
 
 The FAQ knowledge base is written primarily in Malay.
 
 During testing, an English-oriented embedding model produced weaker retrieval quality for Malay-language user queries. To improve semantic retrieval performance, the system was updated to use:
-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 
+```
+sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+```
 This improved retrieval quality significantly for Malay FAQ matching.
 
-Gemini API Note
+##  Gemini API Note
 
 The assessment document included a Gemini API key. During implementation and testing, that key returned an expired or invalid key response.
 
-To ensure the project remains fully functional and reproducible, the application loads a valid Gemini API key from a local .env file instead.
+To ensure the project remains fully functional and reproducible, the application loads a valid Gemini API key from a local `.env` file instead.
 
 This approach is also better from a security and software engineering perspective, since secrets should not be hardcoded into source files.
 
-Deployment Note
+## Deployment Note
 
 The deployed Streamlit app is configured to build the vector store automatically on first startup if the FAISS index files do not yet exist.
 
 For deployed environments, the Gemini API key should be configured using Streamlit secrets.
 
-Repository Link
+## Repository Link
 
 https://github.com/aghelan/rag-chatbot-assessment
 
-Deployed Application Link
+## Deployed Application Link
 
 https://rag-chatbot-assessment.streamlit.app/
+
+## Author 
+Aghelan Logasaravanan
